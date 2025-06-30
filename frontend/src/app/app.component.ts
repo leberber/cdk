@@ -28,10 +28,10 @@ export class AppComponent implements OnInit {
   isLoading = false;
 
   // Use relative URL for CloudFront deployment
-  private apiUrl = '/api';
+  // private apiUrl = '/api';
   
   // For local development, comment out above and use:
-  // private apiUrl = 'http://localhost:8000/api';
+  private apiUrl = 'http://localhost:8000/api';
 
   constructor(private http: HttpClient) {}
 
