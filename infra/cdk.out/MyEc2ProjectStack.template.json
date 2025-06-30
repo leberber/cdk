@@ -1,0 +1,189 @@
+{
+ "Resources": {
+  "WebServerSG4D0F372C": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for web server",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow SSH",
+      "FromPort": 22,
+      "IpProtocol": "tcp",
+      "ToPort": 22
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow HTTP",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     }
+    ],
+    "VpcId": "vpc-01fa743127f2b5bfa"
+   },
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/WebServerSG/Resource"
+   }
+  },
+  "WebServerInstanceRoleEEE3F4CD": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ec2.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "MyEc2ProjectStack/WebServer"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/WebServer/InstanceRole/Resource"
+   }
+  },
+  "WebServerInstanceProfile7A5DA8F6": {
+   "Type": "AWS::IAM::InstanceProfile",
+   "Properties": {
+    "Roles": [
+     {
+      "Ref": "WebServerInstanceRoleEEE3F4CD"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/WebServer/InstanceProfile"
+   }
+  },
+  "WebServer99EDD300": {
+   "Type": "AWS::EC2::Instance",
+   "Properties": {
+    "AvailabilityZone": "eu-west-3a",
+    "IamInstanceProfile": {
+     "Ref": "WebServerInstanceProfile7A5DA8F6"
+    },
+    "ImageId": {
+     "Ref": "SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amikernel510hvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter"
+    },
+    "InstanceType": "t2.micro",
+    "KeyName": "amanu-ssh-key",
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "WebServerSG4D0F372C",
+       "GroupId"
+      ]
+     }
+    ],
+    "SubnetId": "subnet-0653848b1b02595ac",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "MyEc2ProjectStack/WebServer"
+     }
+    ],
+    "UserData": {
+     "Fn::Base64": "#!/bin/bash"
+    }
+   },
+   "DependsOn": [
+    "WebServerInstanceRoleEEE3F4CD"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/WebServer/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1WOwQ6CMBBEv4V7WQEPfoAH40kCH2BqXeIKtGS7DSFN/92AcvA0M28yyVRQFgUUmZ59bp59PtADYiva9KpB7wIbVHr294imgtiiCUyyXNiFSZ07+w+u1ou2Btdm90mRHiE2btjwrntds+towJRWWGvWIwryGm5BpiDb5nckqXqRl7OHI5QVnLK3J8o5WKERofnqB9D5wgXQAAAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Parameters": {
+  "SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amikernel510hvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter": {
+   "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+   "Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-kernel-5.10-hvm-x86_64-gp2"
+  },
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Outputs": {
+  "PublicIP": {
+   "Description": "Public IP of the EC2 instance",
+   "Value": {
+    "Fn::GetAtt": [
+     "WebServer99EDD300",
+     "PublicIp"
+    ]
+   }
+  },
+  "SSHCommand": {
+   "Description": "SSH command to connect to the instance",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "ssh -i amanu-ssh-key.pem ec2-user@",
+      {
+       "Fn::GetAtt": [
+        "WebServer99EDD300",
+        "PublicIp"
+       ]
+      }
+     ]
+    ]
+   }
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

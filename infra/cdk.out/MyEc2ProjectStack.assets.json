@@ -1,0 +1,20 @@
+{
+  "version": "34.0.0",
+  "files": {
+    "96369d231f725d1e3b1f07747175a46d86e07ea28413a2d628f3d033d9fa6346": {
+      "source": {
+        "path": "MyEc2ProjectStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "974445237958-eu-west-3": {
+          "bucketName": "cdk-hnb659fds-assets-974445237958-eu-west-3",
+          "objectKey": "96369d231f725d1e3b1f07747175a46d86e07ea28413a2d628f3d033d9fa6346.json",
+          "region": "eu-west-3",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::974445237958:role/cdk-hnb659fds-file-publishing-role-974445237958-eu-west-3"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}
