@@ -57,57 +57,28 @@ class Ec2ProjectStack(Stack):
             "Allow Angular"
         )
 
-        # User data to install all dependencies
+        # Simplified user data - just basic setup
         user_data = ec2.UserData.for_linux()
         user_data.add_commands(
             "#!/bin/bash",
-            "yum update -y",
-            
-            # Install Git
-            "yum install -y git",
-            
-            # Install Docker and Docker Compose
-            "yum install -y docker",
-            "systemctl start docker",
-            "systemctl enable docker",
-            "usermod -a -G docker ec2-user",
-            
-            # Install Docker Compose
-            "curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose",
-            "chmod +x /usr/local/bin/docker-compose",
-            
-            # Install Python 3 and pip
-            "yum install -y python3 python3-pip",
-            
-            # Install Node.js 18
-            "curl -fsSL https://rpm.nodesource.com/setup_18.x | bash -",
-            "yum install -y nodejs",
-            
-            # Install Angular CLI globally
-            "npm install -g @angular/cli",
-            
-            # Install Nginx
-            "yum install -y nginx",
-            "systemctl enable nginx",
-            
-            # Create project directories
-            "mkdir -p /home/ec2-user/backend",
-            "mkdir -p /home/ec2-user/frontend",
-            "chown -R ec2-user:ec2-user /home/ec2-user/",
-            
-            # Create a simple status page
-            "echo 'Server is ready for FastAPI and Angular deployment!' > /var/www/html/index.html",
-            "systemctl start nginx"
+            "sudo dnf update -y",
+            "sudo dnf install -y git",
+            "echo 'Instance is ready!' | sudo tee /var/log/user-data.log",
+
+            "sudo dnf install -y docker",
+            "sudo systemctl start docker",
+            "sudo systemctl enable docker",
+            "sudo usermod -a -G docker ec2-user",
         )
 
-        # Create EC2 instance (free tier eligible)
+        # Create EC2 instance (free tier eligible) - Using Ubuntu
         instance = ec2.Instance(
             self, "WebServer",
             instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.T2, 
-                ec2.InstanceSize.MICRO
-            ),  # Free tier
-            machine_image=ec2.MachineImage.latest_amazon_linux2(),
+                ec2.InstanceClass.T3, 
+                ec2.InstanceSize.SMALL
+            ),  # Upgraded to t3.small for more memory
+            machine_image=ec2.MachineImage.latest_amazon_linux2023(),  # Updated to Amazon Linux 2023
             vpc=vpc,
             security_group=security_group,
             key_name="amanu-ssh-key",
