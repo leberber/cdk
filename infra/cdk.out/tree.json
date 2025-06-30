@@ -74,6 +74,27 @@
                         "fromPort": 80,
                         "toPort": 80,
                         "description": "Allow HTTP"
+                      },
+                      {
+                        "cidrIp": "0.0.0.0/0",
+                        "ipProtocol": "tcp",
+                        "fromPort": 443,
+                        "toPort": 443,
+                        "description": "Allow HTTPS"
+                      },
+                      {
+                        "cidrIp": "0.0.0.0/0",
+                        "ipProtocol": "tcp",
+                        "fromPort": 8000,
+                        "toPort": 8000,
+                        "description": "Allow FastAPI"
+                      },
+                      {
+                        "cidrIp": "0.0.0.0/0",
+                        "ipProtocol": "tcp",
+                        "fromPort": 4200,
+                        "toPort": 4200,
+                        "description": "Allow Angular"
                       }
                     ],
                     "vpcId": "vpc-01fa743127f2b5bfa"
@@ -192,7 +213,7 @@
                       }
                     ],
                     "userData": {
-                      "Fn::Base64": "#!/bin/bash"
+                      "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nyum update -y\nyum install -y git\nyum install -y docker\nsystemctl start docker\nsystemctl enable docker\nusermod -a -G docker ec2-user\ncurl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nchmod +x /usr/local/bin/docker-compose\nyum install -y python3 python3-pip\ncurl -fsSL https://rpm.nodesource.com/setup_18.x | bash -\nyum install -y nodejs\nnpm install -g @angular/cli\nyum install -y nginx\nsystemctl enable nginx\nmkdir -p /home/ec2-user/backend\nmkdir -p /home/ec2-user/frontend\nchown -R ec2-user:ec2-user /home/ec2-user/\necho 'Server is ready for FastAPI and Angular deployment!' > /var/www/html/index.html\nsystemctl start nginx"
                     }
                   }
                 },
@@ -234,6 +255,14 @@
           "SSHCommand": {
             "id": "SSHCommand",
             "path": "MyEc2ProjectStack/SSHCommand",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.100.0"
+            }
+          },
+          "ServerStatusURL": {
+            "id": "ServerStatusURL",
+            "path": "MyEc2ProjectStack/ServerStatusURL",
             "constructInfo": {
               "fqn": "aws-cdk-lib.CfnOutput",
               "version": "2.100.0"

@@ -25,6 +25,27 @@
       "FromPort": 80,
       "IpProtocol": "tcp",
       "ToPort": 80
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow HTTPS",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow FastAPI",
+      "FromPort": 8000,
+      "IpProtocol": "tcp",
+      "ToPort": 8000
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow Angular",
+      "FromPort": 4200,
+      "IpProtocol": "tcp",
+      "ToPort": 4200
      }
     ],
     "VpcId": "vpc-01fa743127f2b5bfa"
@@ -100,7 +121,7 @@
      }
     ],
     "UserData": {
-     "Fn::Base64": "#!/bin/bash"
+     "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nyum update -y\nyum install -y git\nyum install -y docker\nsystemctl start docker\nsystemctl enable docker\nusermod -a -G docker ec2-user\ncurl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nchmod +x /usr/local/bin/docker-compose\nyum install -y python3 python3-pip\ncurl -fsSL https://rpm.nodesource.com/setup_18.x | bash -\nyum install -y nodejs\nnpm install -g @angular/cli\nyum install -y nginx\nsystemctl enable nginx\nmkdir -p /home/ec2-user/backend\nmkdir -p /home/ec2-user/frontend\nchown -R ec2-user:ec2-user /home/ec2-user/\necho 'Server is ready for FastAPI and Angular deployment!' > /var/www/html/index.html\nsystemctl start nginx"
     }
    },
    "DependsOn": [
@@ -148,6 +169,23 @@
      "",
      [
       "ssh -i amanu-ssh-key.pem ec2-user@",
+      {
+       "Fn::GetAtt": [
+        "WebServer99EDD300",
+        "PublicIp"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "ServerStatusURL": {
+   "Description": "Server status page",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://",
       {
        "Fn::GetAtt": [
         "WebServer99EDD300",
