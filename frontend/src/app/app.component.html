@@ -1,0 +1,106 @@
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <h1>{{ title }}</h1>
+    <p class="subtitle">Deployed on AWS Fargate + CloudFront</p>
+  </div>
+
+  <!-- Add Item Section -->
+  <div class="add-section">
+    <h2>Add New Item</h2>
+    <form class="add-form" (ngSubmit)="addItem()">
+      <div class="form-group">
+        <label for="itemName">Name *</label>
+        <input 
+          type="text" 
+          id="itemName"
+          class="form-control" 
+          [(ngModel)]="newItem.name" 
+          name="itemName"
+          placeholder="Enter item name"
+          [disabled]="isLoading"
+          required>
+      </div>
+      
+      <div class="form-group">
+        <label for="itemDescription">Description</label>
+        <textarea 
+          id="itemDescription"
+          class="form-control" 
+          [(ngModel)]="newItem.description" 
+          name="itemDescription"
+          placeholder="Enter item description (optional)"
+          [disabled]="isLoading"
+          rows="3"></textarea>
+      </div>
+      
+      <div class="form-actions">
+        <button 
+          type="submit" 
+          class="btn btn-primary"
+          [disabled]="isLoading || !newItem.name.trim()">
+          {{ isLoading ? 'Adding...' : 'Add Item' }}
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-secondary"
+          (click)="refresh()"
+          [disabled]="isLoading">
+          {{ isLoading ? 'Loading...' : 'Refresh' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Items Section -->
+  <div class="items-section">
+    <div class="section-header">
+      <h2>Items</h2>
+      <div class="item-count">{{ items.length }} item{{ items.length !== 1 ? 's' : '' }}</div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="loading-state">
+      <div class="spinner"></div>
+      <p>{{ status }}</p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && items.length === 0" class="empty-state">
+      <div class="empty-icon">📋</div>
+      <h3>No items yet</h3>
+      <p>Add your first item using the form above</p>
+    </div>
+
+    <!-- Items Grid -->
+    <div *ngIf="!isLoading && items.length > 0" class="items-grid">
+      <div *ngFor="let item of items; trackBy: trackByItemId" class="item-card">
+        <div class="item-content">
+          <h3 class="item-name">{{ item.name }}</h3>
+          <p *ngIf="item.description" class="item-description">{{ item.description }}</p>
+          <p *ngIf="!item.description" class="item-description">No description</p>
+          <small class="item-id">ID: {{ item.id }}</small>
+        </div>
+        <div class="item-actions">
+          <button 
+            class="btn btn-danger btn-sm"
+            (click)="deleteItem(item.id!, item.name)"
+            [disabled]="isLoading">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar" [ngClass]="{
+    'error': status.includes('Error'),
+    'success': status.includes('successfully')
+  }">
+    <span class="status-text">{{ status }}</span>
+    <span class="api-indicator" [ngClass]="{'connected': !status.includes('Error')}">
+      {{ status.includes('Error') ? 'Disconnected' : 'Connected' }}
+    </span>
+  </div>
+</div>
