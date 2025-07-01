@@ -2,13 +2,15 @@ from aws_cdk import (
     Stack,
     CfnOutput,
     aws_ec2 as ec2,
+    aws_route53 as route53,
+    Duration,
 )
 from constructs import Construct
 
 
 class Ec2ProjectStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, domain_name: str = None, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # Use default VPC
@@ -70,26 +72,53 @@ class Ec2ProjectStack(Stack):
             "sudo systemctl enable docker",
             "sudo usermod -a -G docker ec2-user",
 
-             "sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose",
+            "sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose",
             "sudo chmod +x /usr/local/bin/docker-compose",
             
             # Install Python 3 and pip
             "sudo dnf install -y python3 python3-pip",
+            "sudo dnf install -y nginx certbot python3-certbot-nginx",
+            "sudo systemctl enable nginx",
         )
 
-        # Create EC2 instance (free tier eligible) - Using Ubuntu
+        # Create EC2 instance
         instance = ec2.Instance(
             self, "WebServer",
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.T3, 
                 ec2.InstanceSize.SMALL
-            ),  # Upgraded to t3.small for more memory
-            machine_image=ec2.MachineImage.latest_amazon_linux2023(),  # Updated to Amazon Linux 2023
+            ),
+            machine_image=ec2.MachineImage.latest_amazon_linux2023(),
             vpc=vpc,
             security_group=security_group,
             key_name="amanu-ssh-key",
             user_data=user_data
         )
+
+        # Domain configuration (if domain provided)
+        if domain_name:
+            # Lookup the existing hosted zone
+            hosted_zone = route53.HostedZone.from_lookup(
+                self, "HostedZone",
+                domain_name=domain_name
+            )
+
+            # Create A record pointing to the instance public IP
+            route53.ARecord(
+                self, "ARecord",
+                zone=hosted_zone,
+                target=route53.RecordTarget.from_ip_addresses(instance.instance_public_ip),
+                ttl=Duration.minutes(5)
+            )
+
+            # Create www subdomain record
+            route53.ARecord(
+                self, "WWWRecord",
+                zone=hosted_zone,
+                record_name="www",
+                target=route53.RecordTarget.from_ip_addresses(instance.instance_public_ip),
+                ttl=Duration.minutes(5)
+            )
 
         # Output the public IP
         CfnOutput(
@@ -108,6 +137,6 @@ class Ec2ProjectStack(Stack):
         # Output server status URL
         CfnOutput(
             self, "ServerStatusURL",
-            value=f"http://{instance.instance_public_ip}",
-            description="Server status page"
+            value=f"https://{domain_name}" if domain_name else f"http://{instance.instance_public_ip}",
+            description="Application URL"
         )

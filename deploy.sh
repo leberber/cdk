@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration variables
-EC2_IP="52.47.76.1"
+EC2_IP="35.181.57.216"
 SSH_KEY="/Users/yazidmekhtoub/.ssh/amanu-ssh-key.pem"
 EC2_USER="ec2-user"
 
@@ -55,4 +55,5 @@ rm -f $BACKEND_TAR $FRONTEND_TAR
 
 echo "✅ Deployment finished!"
 echo "🌐 Frontend: http://$EC2_IP"
+echo "🌐 Frontend: http://elsuq.org"
 echo "📚 Backend API: http://$EC2_IP:8000/docs"

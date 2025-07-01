@@ -290,7 +290,7 @@ services:
   frontend:
     image: frontend:latest
     ports:
-      - "80:80"
+      - "4200:80" 
     depends_on:
       - backend
     restart: unless-stopped
@@ -320,7 +320,9 @@ import aws_cdk as cdk
 from ec2_stack import Ec2ProjectStack
 
 app = cdk.App()
+
 Ec2ProjectStack(app, "MyEc2ProjectStack",
+    domain_name="elsuq.org",  # This will create DNS records
     env=cdk.Environment(
         account=os.getenv('CDK_DEFAULT_ACCOUNT'),
         region=os.getenv('CDK_DEFAULT_REGION')
@@ -363,6 +365,10 @@ app.synth()
         ]
       }
     ]
+  },
+  "hosted-zone:account=974445237958:domainName=elsuq.org:region=eu-west-3": {
+    "Id": "/hostedzone/Z040531834UZQRHG5PULE",
+    "Name": "elsuq.org."
   }
 }
 
@@ -382,13 +388,15 @@ from aws_cdk import (
     Stack,
     CfnOutput,
     aws_ec2 as ec2,
+    aws_route53 as route53,
+    Duration,
 )
 from constructs import Construct
 
 
 class Ec2ProjectStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, domain_name: str = None, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # Use default VPC
@@ -450,26 +458,53 @@ class Ec2ProjectStack(Stack):
             "sudo systemctl enable docker",
             "sudo usermod -a -G docker ec2-user",
 
-             "sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose",
+            "sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose",
             "sudo chmod +x /usr/local/bin/docker-compose",
             
             # Install Python 3 and pip
             "sudo dnf install -y python3 python3-pip",
+            "sudo dnf install -y nginx certbot python3-certbot-nginx",
+            "sudo systemctl enable nginx",
         )
 
-        # Create EC2 instance (free tier eligible) - Using Ubuntu
+        # Create EC2 instance
         instance = ec2.Instance(
             self, "WebServer",
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.T3, 
                 ec2.InstanceSize.SMALL
-            ),  # Upgraded to t3.small for more memory
-            machine_image=ec2.MachineImage.latest_amazon_linux2023(),  # Updated to Amazon Linux 2023
+            ),
+            machine_image=ec2.MachineImage.latest_amazon_linux2023(),
             vpc=vpc,
             security_group=security_group,
             key_name="amanu-ssh-key",
             user_data=user_data
         )
+
+        # Domain configuration (if domain provided)
+        if domain_name:
+            # Lookup the existing hosted zone
+            hosted_zone = route53.HostedZone.from_lookup(
+                self, "HostedZone",
+                domain_name=domain_name
+            )
+
+            # Create A record pointing to the instance public IP
+            route53.ARecord(
+                self, "ARecord",
+                zone=hosted_zone,
+                target=route53.RecordTarget.from_ip_addresses(instance.instance_public_ip),
+                ttl=Duration.minutes(5)
+            )
+
+            # Create www subdomain record
+            route53.ARecord(
+                self, "WWWRecord",
+                zone=hosted_zone,
+                record_name="www",
+                target=route53.RecordTarget.from_ip_addresses(instance.instance_public_ip),
+                ttl=Duration.minutes(5)
+            )
 
         # Output the public IP
         CfnOutput(
@@ -488,8 +523,8 @@ class Ec2ProjectStack(Stack):
         # Output server status URL
         CfnOutput(
             self, "ServerStatusURL",
-            value=f"http://{instance.instance_public_ip}",
-            description="Server status page"
+            value=f"https://{domain_name}" if domain_name else f"http://{instance.instance_public_ip}",
+            description="Application URL"
         )
 
 === infra/cdk.out/MyEc2ProjectStack.assets.json ===
@@ -497,7 +532,7 @@ class Ec2ProjectStack(Stack):
 {
   "version": "34.0.0",
   "files": {
-    "75592405f6ddf1a3b4e0423aa76180786090a31dd5182e77c5b9cd6e8c258baf": {
+    "1c78418f4b53a53221c162c4d61c7a4c6ecfbeef722c0ff1646d205a86a83f6b": {
       "source": {
         "path": "MyEc2ProjectStack.template.json",
         "packaging": "file"
@@ -505,7 +540,7 @@ class Ec2ProjectStack(Stack):
       "destinations": {
         "974445237958-eu-west-3": {
           "bucketName": "cdk-hnb659fds-assets-974445237958-eu-west-3",
-          "objectKey": "75592405f6ddf1a3b4e0423aa76180786090a31dd5182e77c5b9cd6e8c258baf.json",
+          "objectKey": "1c78418f4b53a53221c162c4d61c7a4c6ecfbeef722c0ff1646d205a86a83f6b.json",
           "region": "eu-west-3",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::974445237958:role/cdk-hnb659fds-file-publishing-role-974445237958-eu-west-3"
         }
@@ -640,7 +675,7 @@ class Ec2ProjectStack(Stack):
      }
     ],
     "UserData": {
-     "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip"
+     "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip\nsudo dnf install -y nginx certbot python3-certbot-nginx\nsudo systemctl enable nginx"
     }
    },
    "DependsOn": [
@@ -650,10 +685,50 @@ class Ec2ProjectStack(Stack):
     "aws:cdk:path": "MyEc2ProjectStack/WebServer/Resource"
    }
   },
+  "ARecordE7B57761": {
+   "Type": "AWS::Route53::RecordSet",
+   "Properties": {
+    "HostedZoneId": "Z040531834UZQRHG5PULE",
+    "Name": "elsuq.org.",
+    "ResourceRecords": [
+     {
+      "Fn::GetAtt": [
+       "WebServer99EDD300",
+       "PublicIp"
+      ]
+     }
+    ],
+    "TTL": "300",
+    "Type": "A"
+   },
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/ARecord/Resource"
+   }
+  },
+  "WWWRecordA21741B4": {
+   "Type": "AWS::Route53::RecordSet",
+   "Properties": {
+    "HostedZoneId": "Z040531834UZQRHG5PULE",
+    "Name": "www.elsuq.org.",
+    "ResourceRecords": [
+     {
+      "Fn::GetAtt": [
+       "WebServer99EDD300",
+       "PublicIp"
+      ]
+     }
+    ],
+    "TTL": "300",
+    "Type": "A"
+   },
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/WWWRecord/Resource"
+   }
+  },
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1WOwQ6CMBBEv4V7WQEPfoAH40kCH2BqXeIKtGS7DSFN/92AcvA0M28yyVRQFgUUmZ59bp59PtADYiva9KpB7wIbVHr294imgtiiCUyyXNiFSZ07+w+u1ou2Btdm90mRHiE2btjwrntds+towJRWWGvWIwryGm5BpiDb5nckqXqRl7OHI5QVnLK3J8o5WKERofnqB9D5wgXQAAAA"
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1WOzQqDMBCEn8V73PpD6bn0UHqq6AOUNK40VRPZbBAJefei4qGnmflmDlNAnmWQJXJ2qWr7dNBvCA1L1YsanfWkUMjZvQKqAkKDypPm5U7WT+LWmX/wMI6lUbg2h49CyxFCbYcNH3rUFdlODxgFWc94LiFca1SW2m28uQY5xjVWkuSIjLSGp+fJ877af0ZRLfyx5lRCXsAl+TqtU/KG9YhQ7/oDVj/Hcu8AAAA="
    },
    "Metadata": {
     "aws:cdk:path": "MyEc2ProjectStack/CDKMetadata/Default"
@@ -699,21 +774,8 @@ class Ec2ProjectStack(Stack):
    }
   },
   "ServerStatusURL": {
-   "Description": "Server status page",
-   "Value": {
-    "Fn::Join": [
-     "",
-     [
-      "http://",
-      {
-       "Fn::GetAtt": [
-        "WebServer99EDD300",
-        "PublicIp"
-       ]
-      }
-     ]
-    ]
-   }
+   "Description": "Application URL",
+   "Value": "https://elsuq.org"
   }
  },
  "Rules": {
@@ -767,7 +829,7 @@ class Ec2ProjectStack(Stack):
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::974445237958:role/cdk-hnb659fds-deploy-role-974445237958-eu-west-3",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::974445237958:role/cdk-hnb659fds-cfn-exec-role-974445237958-eu-west-3",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-974445237958-eu-west-3/75592405f6ddf1a3b4e0423aa76180786090a31dd5182e77c5b9cd6e8c258baf.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-974445237958-eu-west-3/1c78418f4b53a53221c162c4d61c7a4c6ecfbeef722c0ff1646d205a86a83f6b.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -811,6 +873,18 @@ class Ec2ProjectStack(Stack):
           {
             "type": "aws:cdk:logicalId",
             "data": "SsmParameterValueawsserviceamiamazonlinuxlatestal2023amikernel61x8664C96584B6F00A464EAD1953AFF4B05118Parameter"
+          }
+        ],
+        "/MyEc2ProjectStack/ARecord/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ARecordE7B57761"
+          }
+        ],
+        "/MyEc2ProjectStack/WWWRecord/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WWWRecordA21741B4"
           }
         ],
         "/MyEc2ProjectStack/PublicIP": [
@@ -1078,7 +1152,7 @@ class Ec2ProjectStack(Stack):
                       }
                     ],
                     "userData": {
-                      "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip"
+                      "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip\nsudo dnf install -y nginx certbot python3-certbot-nginx\nsudo systemctl enable nginx"
                     }
                   }
                 },
@@ -1106,6 +1180,84 @@ class Ec2ProjectStack(Stack):
             "path": "MyEc2ProjectStack/SsmParameterValue:--aws--service--ami-amazon-linux-latest--al2023-ami-kernel-6.1-x86_64:C96584B6-F00A-464E-AD19-53AFF4B05118",
             "constructInfo": {
               "fqn": "aws-cdk-lib.Resource",
+              "version": "2.100.0"
+            }
+          },
+          "HostedZone": {
+            "id": "HostedZone",
+            "path": "MyEc2ProjectStack/HostedZone",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.Resource",
+              "version": "2.100.0"
+            }
+          },
+          "ARecord": {
+            "id": "ARecord",
+            "path": "MyEc2ProjectStack/ARecord",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "MyEc2ProjectStack/ARecord/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::Route53::RecordSet",
+                  "aws:cdk:cloudformation:props": {
+                    "hostedZoneId": "Z040531834UZQRHG5PULE",
+                    "name": "elsuq.org.",
+                    "resourceRecords": [
+                      {
+                        "Fn::GetAtt": [
+                          "WebServer99EDD300",
+                          "PublicIp"
+                        ]
+                      }
+                    ],
+                    "ttl": "300",
+                    "type": "A"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_route53.CfnRecordSet",
+                  "version": "2.100.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_route53.ARecord",
+              "version": "2.100.0"
+            }
+          },
+          "WWWRecord": {
+            "id": "WWWRecord",
+            "path": "MyEc2ProjectStack/WWWRecord",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "MyEc2ProjectStack/WWWRecord/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::Route53::RecordSet",
+                  "aws:cdk:cloudformation:props": {
+                    "hostedZoneId": "Z040531834UZQRHG5PULE",
+                    "name": "www.elsuq.org.",
+                    "resourceRecords": [
+                      {
+                        "Fn::GetAtt": [
+                          "WebServer99EDD300",
+                          "PublicIp"
+                        ]
+                      }
+                    ],
+                    "ttl": "300",
+                    "type": "A"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_route53.CfnRecordSet",
+                  "version": "2.100.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_route53.ARecord",
               "version": "2.100.0"
             }
           },
@@ -2353,7 +2505,8 @@ export class AppComponent implements OnInit {
   // private apiUrl = '/api';
   
   // For local development, comment out above and use:
-  private apiUrl = 'http://52.47.76.1:8000/api';
+  private apiUrl = '/api';
+
 
   constructor(private http: HttpClient) {}
 

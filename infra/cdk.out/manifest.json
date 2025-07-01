@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::974445237958:role/cdk-hnb659fds-deploy-role-974445237958-eu-west-3",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::974445237958:role/cdk-hnb659fds-cfn-exec-role-974445237958-eu-west-3",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-974445237958-eu-west-3/75592405f6ddf1a3b4e0423aa76180786090a31dd5182e77c5b9cd6e8c258baf.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-974445237958-eu-west-3/1c78418f4b53a53221c162c4d61c7a4c6ecfbeef722c0ff1646d205a86a83f6b.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -62,6 +62,18 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "SsmParameterValueawsserviceamiamazonlinuxlatestal2023amikernel61x8664C96584B6F00A464EAD1953AFF4B05118Parameter"
+          }
+        ],
+        "/MyEc2ProjectStack/ARecord/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ARecordE7B57761"
+          }
+        ],
+        "/MyEc2ProjectStack/WWWRecord/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WWWRecordA21741B4"
           }
         ],
         "/MyEc2ProjectStack/PublicIP": [

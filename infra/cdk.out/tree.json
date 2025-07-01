@@ -213,7 +213,7 @@
                       }
                     ],
                     "userData": {
-                      "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip"
+                      "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip\nsudo dnf install -y nginx certbot python3-certbot-nginx\nsudo systemctl enable nginx"
                     }
                   }
                 },
@@ -241,6 +241,84 @@
             "path": "MyEc2ProjectStack/SsmParameterValue:--aws--service--ami-amazon-linux-latest--al2023-ami-kernel-6.1-x86_64:C96584B6-F00A-464E-AD19-53AFF4B05118",
             "constructInfo": {
               "fqn": "aws-cdk-lib.Resource",
+              "version": "2.100.0"
+            }
+          },
+          "HostedZone": {
+            "id": "HostedZone",
+            "path": "MyEc2ProjectStack/HostedZone",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.Resource",
+              "version": "2.100.0"
+            }
+          },
+          "ARecord": {
+            "id": "ARecord",
+            "path": "MyEc2ProjectStack/ARecord",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "MyEc2ProjectStack/ARecord/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::Route53::RecordSet",
+                  "aws:cdk:cloudformation:props": {
+                    "hostedZoneId": "Z040531834UZQRHG5PULE",
+                    "name": "elsuq.org.",
+                    "resourceRecords": [
+                      {
+                        "Fn::GetAtt": [
+                          "WebServer99EDD300",
+                          "PublicIp"
+                        ]
+                      }
+                    ],
+                    "ttl": "300",
+                    "type": "A"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_route53.CfnRecordSet",
+                  "version": "2.100.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_route53.ARecord",
+              "version": "2.100.0"
+            }
+          },
+          "WWWRecord": {
+            "id": "WWWRecord",
+            "path": "MyEc2ProjectStack/WWWRecord",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "MyEc2ProjectStack/WWWRecord/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::Route53::RecordSet",
+                  "aws:cdk:cloudformation:props": {
+                    "hostedZoneId": "Z040531834UZQRHG5PULE",
+                    "name": "www.elsuq.org.",
+                    "resourceRecords": [
+                      {
+                        "Fn::GetAtt": [
+                          "WebServer99EDD300",
+                          "PublicIp"
+                        ]
+                      }
+                    ],
+                    "ttl": "300",
+                    "type": "A"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_route53.CfnRecordSet",
+                  "version": "2.100.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_route53.ARecord",
               "version": "2.100.0"
             }
           },

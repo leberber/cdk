@@ -121,7 +121,7 @@
      }
     ],
     "UserData": {
-     "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip"
+     "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip\nsudo dnf install -y nginx certbot python3-certbot-nginx\nsudo systemctl enable nginx"
     }
    },
    "DependsOn": [
@@ -131,10 +131,50 @@
     "aws:cdk:path": "MyEc2ProjectStack/WebServer/Resource"
    }
   },
+  "ARecordE7B57761": {
+   "Type": "AWS::Route53::RecordSet",
+   "Properties": {
+    "HostedZoneId": "Z040531834UZQRHG5PULE",
+    "Name": "elsuq.org.",
+    "ResourceRecords": [
+     {
+      "Fn::GetAtt": [
+       "WebServer99EDD300",
+       "PublicIp"
+      ]
+     }
+    ],
+    "TTL": "300",
+    "Type": "A"
+   },
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/ARecord/Resource"
+   }
+  },
+  "WWWRecordA21741B4": {
+   "Type": "AWS::Route53::RecordSet",
+   "Properties": {
+    "HostedZoneId": "Z040531834UZQRHG5PULE",
+    "Name": "www.elsuq.org.",
+    "ResourceRecords": [
+     {
+      "Fn::GetAtt": [
+       "WebServer99EDD300",
+       "PublicIp"
+      ]
+     }
+    ],
+    "TTL": "300",
+    "Type": "A"
+   },
+   "Metadata": {
+    "aws:cdk:path": "MyEc2ProjectStack/WWWRecord/Resource"
+   }
+  },
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1WOwQ6CMBBEv4V7WQEPfoAH40kCH2BqXeIKtGS7DSFN/92AcvA0M28yyVRQFgUUmZ59bp59PtADYiva9KpB7wIbVHr294imgtiiCUyyXNiFSZ07+w+u1ou2Btdm90mRHiE2btjwrntds+towJRWWGvWIwryGm5BpiDb5nckqXqRl7OHI5QVnLK3J8o5WKERofnqB9D5wgXQAAAA"
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1WOzQqDMBCEn8V73PpD6bn0UHqq6AOUNK40VRPZbBAJefei4qGnmflmDlNAnmWQJXJ2qWr7dNBvCA1L1YsanfWkUMjZvQKqAkKDypPm5U7WT+LWmX/wMI6lUbg2h49CyxFCbYcNH3rUFdlODxgFWc94LiFca1SW2m28uQY5xjVWkuSIjLSGp+fJ877af0ZRLfyx5lRCXsAl+TqtU/KG9YhQ7/oDVj/Hcu8AAAA="
    },
    "Metadata": {
     "aws:cdk:path": "MyEc2ProjectStack/CDKMetadata/Default"
@@ -180,21 +220,8 @@
    }
   },
   "ServerStatusURL": {
-   "Description": "Server status page",
-   "Value": {
-    "Fn::Join": [
-     "",
-     [
-      "http://",
-      {
-       "Fn::GetAtt": [
-        "WebServer99EDD300",
-        "PublicIp"
-       ]
-      }
-     ]
-    ]
-   }
+   "Description": "Application URL",
+   "Value": "https://elsuq.org"
   }
  },
  "Rules": {
