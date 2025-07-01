@@ -121,7 +121,7 @@
      }
     ],
     "UserData": {
-     "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log"
+     "Fn::Base64": "#!/bin/bash\n#!/bin/bash\nsudo dnf update -y\nsudo dnf install -y git\necho 'Instance is ready!' | sudo tee /var/log/user-data.log\nsudo dnf install -y docker\nsudo systemctl start docker\nsudo systemctl enable docker\nsudo usermod -a -G docker ec2-user\nsudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\nsudo chmod +x /usr/local/bin/docker-compose\nsudo dnf install -y python3 python3-pip"
     }
    },
    "DependsOn": [

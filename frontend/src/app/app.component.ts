@@ -31,7 +31,7 @@ export class AppComponent implements OnInit {
   // private apiUrl = '/api';
   
   // For local development, comment out above and use:
-  private apiUrl = 'http://localhost:8000/api';
+  private apiUrl = 'http://52.47.76.1:8000/api';
 
   constructor(private http: HttpClient) {}
 
