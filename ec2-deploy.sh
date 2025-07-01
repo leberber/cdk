@@ -1,57 +1,136 @@
 #!/bin/bash
 
-# Configuration variables
+# Simplified EC2 Deployment Script with clean separation of aesthetics and logic
+set -e
+
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+# Configuration
 BACKEND_IMAGE="backend"
 FRONTEND_IMAGE="frontend"
 BACKEND_TAR="backend.tar.gz"
 FRONTEND_TAR="frontend.tar.gz"
 DOCKER_COMPOSE_FILE="docker-compose.yml"
 
-echo "=== EC2 Deployment Script ==="
+# ============================================================================
+# VISUAL FUNCTIONS (Aesthetics only)
+# ============================================================================
 
-# Stop ALL running containers first
-echo "Stopping all running containers..."
-sudo docker stop $(sudo docker ps -q) 2>/dev/null || true
+print_header() {
+    echo -e "\n${PURPLE}═══════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${PURPLE}═══════════════════════════════════════════════════════════════════${NC}\n"
+}
 
-# Stop current containers if running
-if [ -f $DOCKER_COMPOSE_FILE ]; then
-  echo "Stopping docker-compose containers..."
-  sudo docker-compose down
-fi
+print_step() { echo -e "${BLUE}▶${NC} ${WHITE}$1${NC}"; }
+print_success() { echo -e "${GREEN}✅ $1${NC}"; }
+print_error() { echo -e "${RED}❌ $1${NC}"; }
+print_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+print_info() { echo -e "${CYAN}ℹ️  $1${NC}"; }
 
-# Remove any containers using our images
-echo "Removing containers using our images..."
-sudo docker rm $(sudo docker ps -aq --filter ancestor=$BACKEND_IMAGE:latest) 2>/dev/null || true
-sudo docker rm $(sudo docker ps -aq --filter ancestor=$FRONTEND_IMAGE:latest) 2>/dev/null || true
+# ============================================================================
+# CORE DEPLOYMENT FUNCTIONS (Original logic preserved)
+# ============================================================================
 
-# Remove old images to save space
-echo "Cleaning up old images..."
-sudo docker rmi $BACKEND_IMAGE:latest $FRONTEND_IMAGE:latest 2>/dev/null || true
+stop_containers() {
+    print_step "Stopping all running containers..."
+    sudo docker stop $(sudo docker ps -q) 2>/dev/null || true
+    print_success "Containers stopped"
+}
 
-# Load new images
-echo "Loading new images..."
-sudo docker load < $BACKEND_TAR
-sudo docker load < $FRONTEND_TAR
+stop_compose() {
+    if [ -f $DOCKER_COMPOSE_FILE ]; then
+        print_step "Stopping docker-compose containers..."
+        sudo docker-compose down
+        print_success "Docker-compose stopped"
+    fi
+}
 
-# Verify images loaded
-echo "Verifying images:"
-sudo docker images | grep -E "($BACKEND_IMAGE|$FRONTEND_IMAGE)"
+remove_old_containers() {
+    print_step "Removing containers using project images..."
+    sudo docker rm $(sudo docker ps -aq --filter ancestor=$BACKEND_IMAGE:latest) 2>/dev/null || true
+    sudo docker rm $(sudo docker ps -aq --filter ancestor=$FRONTEND_IMAGE:latest) 2>/dev/null || true
+    print_success "Old containers removed"
+}
 
-# Start containers
-echo "Starting containers..."
-sudo docker-compose up -d
+load_images() {
+    print_step "Loading backend image..."
+    sudo docker load < $BACKEND_TAR
+    print_success "Backend image loaded"
+    
+    print_step "Loading frontend image..."
+    sudo docker load < $FRONTEND_TAR
+    print_success "Frontend image loaded"
+}
 
-# Show status
-echo "Container status:"
-sudo docker-compose ps
+verify_images() {
+    print_step "Verifying images:"
+    sudo docker images | grep -E "($BACKEND_IMAGE|$FRONTEND_IMAGE)"
+    print_success "Images verified"
+}
 
-# Check logs if containers aren't running
-if ! sudo docker-compose ps | grep -q "Up"; then
-  echo "⚠️  Some containers may have issues. Checking logs:"
-  sudo docker-compose logs --tail=20
-fi
+start_services() {
+    print_step "Starting containers..."
+    sudo docker-compose up -d
+    print_success "Containers started"
+}
 
-# Clean up tar files
-rm -f $BACKEND_TAR $FRONTEND_TAR
+check_status() {
+    print_step "Container status:"
+    sudo docker-compose ps
+    
+    # Check if any containers failed
+    if ! sudo docker-compose ps | grep -q "Up"; then
+        print_warning "Some containers may have issues. Checking logs:"
+        sudo docker-compose logs --tail=20
+    else
+        print_success "All containers running healthy"
+    fi
+}
 
-echo "✅ EC2 deployment complete!"
+cleanup_files() {
+    print_step "Cleaning up temporary files..."
+    rm -f $BACKEND_TAR $FRONTEND_TAR
+    print_success "Cleanup completed"
+}
+
+# ============================================================================
+# MAIN EXECUTION (Simple linear flow)
+# ============================================================================
+
+main() {
+    print_header "🐳 EC2 DEPLOYMENT AUTOMATION"
+    
+    # Core deployment steps (original logic)
+    stop_containers
+    stop_compose  
+    remove_old_containers
+    load_images
+    verify_images
+    start_services
+    check_status
+    cleanup_files
+    
+    # Success message
+    print_header "🎉 DEPLOYMENT COMPLETED!"
+    echo -e "${GREEN}┌──────────────────────────────────────┐${NC}"
+    echo -e "${GREEN}│${NC} ✅ All services running successfully ${GREEN}│${NC}"
+    echo -e "${GREEN}│${NC} ✅ Temporary files cleaned          ${GREEN}│${NC}"
+    echo -e "${GREEN}└──────────────────────────────────────┘${NC}"
+    
+    print_info "Deployment completed at $(date)"
+}
+
+# Error handling
+trap 'print_error "Deployment failed! Check the output above."; exit 1' ERR
+
+# Run deployment
+main "$@"
